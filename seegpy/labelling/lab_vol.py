@@ -5,7 +5,8 @@ import os.path as op
 import numpy as np
 
 import nibabel
-from mne.source_space import _get_lut
+from mne._freesurfer import _get_lut
+# from mne.source_space import _get_lut
 
 from seegpy.config import CONFIG
 from seegpy.transform import apply_transform
