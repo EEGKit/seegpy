@@ -123,8 +123,8 @@ def analyse_channels_in_mat(path, print_report=True):
     fc = f['channels']
     # read channel names and types
     _ref_chan = list(fc['name'])
-    cn = [''.join(chr(i) for i in f[k[0]][:]) for k in list(fc['name'])]
-    ct = [''.join(chr(i) for i in f[k[0]][:]) for k in list(fc['signalType'])]
+    cn = [''.join(chr(i) for i in np.ravel(f[k[0]][:])) for k in list(fc['name'])]
+    ct = [''.join(chr(i) for i in np.ravel(f[k[0]][:])) for k in list(fc['signalType'])]
     # conversion
     all_chan = np.array(cn)
     is_chan = np.array(ct) == 'SEEG'
