@@ -129,7 +129,7 @@ def labelling_contacts_surf_ma(bv_root, suj, xyz, radius=5., bad_label='none',
 
 
 def labelling_contacts_surf_fs(fs_root, suj, xyz, radius=5., bad_label='none',
-                               verbose=None):
+                               annot='aparc.a2009s', verbose=None):
     """Infer contacts' ROI using Freesurfer cortical surface.
 
     Parameters
@@ -161,12 +161,14 @@ def labelling_contacts_surf_fs(fs_root, suj, xyz, radius=5., bad_label='none',
         if not xyz_lr[n_h].shape[0]:
             continue
         # load freesurfer labels and indices
-        fs_idx, fs_names = load_fs_table(fs_root, suj, hemi=h, verbose=verbose)
+        fs_idx, fs_names = load_fs_table(fs_root, suj, hemi=h, annot=annot,
+                                         verbose=verbose)
         # load freesurfer's mesh
         vert, _ = load_fs_mesh(fs_root, suj, hemi=h, transform=True,
                                verbose=verbose)
         # load labmap
-        labmap = load_fs_labmap(fs_root, suj, hemi=h, verbose=verbose)
+        labmap = load_fs_labmap(fs_root, suj, hemi=h, annot=annot,
+                                verbose=verbose)
         # infer roi using freesurfer
         _labels = labelling_contacts_surf(vert, labmap, xyz, fs_idx, fs_names,
                                           radius=radius, bad_label=bad_label,

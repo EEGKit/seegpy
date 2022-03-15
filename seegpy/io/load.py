@@ -260,7 +260,8 @@ def load_fs_mesh(fs_root, suj, hemi='both', transform=True, verbose=None):
     return vertices, faces
 
 
-def load_fs_labmap(fs_root, suj, hemi='both', verbose=None):
+def load_fs_labmap(fs_root, suj, hemi='both', annot='aparc.a2009s',
+                   verbose=None):
     """Load the Freesurfer labmap.
 
     Parameters
@@ -271,6 +272,8 @@ def load_fs_labmap(fs_root, suj, hemi='both', verbose=None):
         Subject name (e.g 'subject_01')
     hemi : {'both', 'left', 'right'}
         Hemispheres to load
+    annot : string |  'aparc.a2009s'
+        Annotation file to use. By default it's using 'aparc.a2009s'
 
     Returns
     -------
@@ -284,7 +287,7 @@ def load_fs_labmap(fs_root, suj, hemi='both', verbose=None):
     # -------------------------------------------------------------------------
     # define path and files to load
     lab_path = CONFIG['FS_LABEL_FOLDER'].format(fs_root=fs_root, suj=suj)
-    lab_files = [f'{h}.aparc.a2009s.annot' for h in load_hemi]
+    lab_files = [f'{h}.{annot}.annot' for h in load_hemi]
 
     # -------------------------------------------------------------------------
     # load the files
@@ -300,7 +303,8 @@ def load_fs_labmap(fs_root, suj, hemi='both', verbose=None):
     return labmap
 
 
-def load_fs_table(fs_root, suj, hemi='both', verbose=None):
+def load_fs_table(fs_root, suj, hemi='both', annot='aparc.a2009s',
+                  verbose=None):
     """Load Freesurfer corresponding table.
 
     Parameters
@@ -311,6 +315,8 @@ def load_fs_table(fs_root, suj, hemi='both', verbose=None):
         Subject name (e.g 'subject_01')
     hemi : {'both', 'left', 'right'}
         Hemispheres to load
+    annot : string |  'aparc.a2009s'
+        Annotation file to use. By default it's using 'aparc.a2009s'
 
     Returns
     -------
@@ -326,7 +332,7 @@ def load_fs_table(fs_root, suj, hemi='both', verbose=None):
     # -------------------------------------------------------------------------
     # define path and files to load
     tab_path = CONFIG['FS_LABEL_FOLDER'].format(fs_root=fs_root, suj=suj)
-    tab_files = [f'{h}.aparc.a2009s.annot' for h in load_hemi]
+    tab_files = [f'{h}.{annot}.annot' for h in load_hemi]
 
     # -------------------------------------------------------------------------
     # load the files

@@ -5,12 +5,14 @@ import os.path as op
 import numpy as np
 
 import nibabel
-from mne._freesurfer import _get_lut
-# from mne.source_space import _get_lut
+try:
+    from mne.source_space import _get_lut
+except:
+    from mne._freesurfer import _get_lut
 
 from seegpy.config import CONFIG
 from seegpy.transform import apply_transform
-from seegpy.io import set_log_level, load_ma_table
+from seegpy.io import set_log_level, load_ma_table, get_data_path
 
 
 logger = logging.getLogger('seegpy')
@@ -191,6 +193,7 @@ def labelling_contacts_vol_fs_mgz(fs_root, suj, xyz, radius=5., file='aseg',
 
             * 'aseg'
             * 'aparc+aseg'
+            * 'aparc+aseg.vep'
             * 'aparc.a2009s+aseg'
     bad_label : string | 'none'
         Label to use for contacts that have no close roi
@@ -205,6 +208,7 @@ def labelling_contacts_vol_fs_mgz(fs_root, suj, xyz, radius=5., file='aseg',
     # build path to the volume file
     mri_path = CONFIG['FS_MRI_FOLDER'].format(fs_root=fs_root, suj=suj)
     mgz_path = op.join(mri_path, f"{file}.mgz")
+    use_vep = 'vep' in file
     if not op.isfile(mgz_path):
         raise IOError(f"File {mgz_path} doesn't exist in the /mri/ Freesurfer "
                       "subfolder.")
@@ -219,8 +223,14 @@ def labelling_contacts_vol_fs_mgz(fs_root, suj, xyz, radius=5., file='aseg',
     vol = arch.get_data()
     tr = arch.affine
     vs = nibabel.affines.voxel_sizes(tr)
-    # load freesurfer LUT table using mne
-    lut = _get_lut()
+    # load LUT table using mne
+    if not use_vep:     # default freesurfer LUT
+        logger.info("    Loading FreeSurfer color LUT")
+        lut = _get_lut()
+    elif use_vep:  # Freesurfer + VEP
+        logger.info("    Loading FreeSurfer+VEP color LUT")
+        lut_path = get_data_path(file='VepFreeSurferColorLut.txt')
+        lut = _get_lut(fname=lut_path)
     fs_labels = np.array(lut['name'])
     fs_idx = np.array(lut['id'])
 
@@ -235,7 +245,7 @@ def labelling_contacts_vol_fs_mgz(fs_root, suj, xyz, radius=5., file='aseg',
                                      wm_idx=wm_idx, vs=vs)
         labels += [_lab]
 
-    return np.array(labels)
+    return np.asanyarray(labels, dtype=object).ravel()
 
 
 if __name__ == '__main__':
