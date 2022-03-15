@@ -173,6 +173,146 @@ def pipeline_labelling_ss(save_path, fs_root, bv_root, suj, c_xyz, c_names,
             wdf.to_excel(writer, sheet_name=sheet)
 
 
+def pipeline_labelling_vep(save_path, fs_root, suj, c_xyz, c_names,
+                           bipolar=True, radius=5., bad_label='none',
+                           testing=True, verbose=None):
+    """Single subject contact labelling pipeline.
+
+    Parameters
+    ----------
+    save_path : string
+        Path to the folder where the labelling file have to be saved
+    fs_root : string
+        Path to the Brainvisa folder where subject are stored
+    bv_root : string
+        Path to the Brainvisa folder where subject are stored
+    suj : string
+        Subject name (e.g 'subject_01')
+    c_xyz : array_like
+        Array of contacts' coordinates in the scanner-based referential
+        (T1.mgz) of shape (n_contacts, 3)
+    c_names : array_like
+        Array of contact's names
+    bipolar : bool | True
+        Consider the provided contacts as monopolar and enable to compute
+        labelling on bipolar derivations
+    radius : float | 5.
+        Distance under which to consider vertices and voxels in order to infer
+        the label
+    bad_label : string | 'none'
+        Label to use for contacts that have no close roi
+    """
+    # -------------------------------------------------------------------------
+    # test the provided data
+    if testing:
+        test_located_contacts(c_xyz, c_names)
+    c_names = np.asarray(clean_contact(list(c_names)))
+
+    # -------------------------------------------------------------------------
+    # file checking
+    set_log_level(verbose)
+    assert op.isdir(save_path)
+    kw = dict(radius=radius, bad_label=bad_label, verbose=verbose)
+    fs_vol_file = 'aparc.a2009s+aseg'
+    vep_vol_file = 'aparc+aseg.vep'
+    # define how the file is going to be saved
+    save_as = op.join(save_path, f"{suj}_radius-{radius}.xlsx")
+
+    # -------------------------------------------------------------------------
+    # monopolar and bipolar
+    contacts = dict()
+    contacts['monopolar'] = (c_xyz, c_names)
+    if bipolar:
+        logger.info("-> Compute bipolar derivations")
+        # get successive contacts
+        ano_names, cat_names, ano_idx, cat_idx = successive_monopolar_contacts(
+            c_names, c_xyz, radius=5., verbose=verbose)
+        cat_xyz, ano_xyz = c_xyz[cat_idx, :], c_xyz[ano_idx, :]
+        # get bipolar names and coordinates
+        bip_xyz = compute_middle_contact(cat_xyz, ano_xyz)
+        bip_names = [f"{c}-{a}" for c, a in zip(cat_names, ano_names)]
+        contacts['bipolar'] = (bip_xyz, np.array(bip_names))
+
+    # -------------------------------------------------------------------------
+    # surfacique and volumique labelling using Freesurfer and VEP
+    df = dict()
+    for n_c, (derivation, (cur_xyz, cur_names)) in enumerate(contacts.items()):
+        logger.info(f'    Processing {derivation} contacts')
+
+        # ---------------------------------------------------------------------
+        # COORDINATES
+        # ---------------------------------------------------------------------
+        # contact name
+        df_name = pd.DataFrame(cur_names, columns=['contact'])
+        # scanner coordinates
+        df_coords = pd.DataFrame()
+        df_coords['x_scanner'] = cur_xyz[:, 0]
+        df_coords['y_scanner'] = cur_xyz[:, 1]
+        df_coords['z_scanner'] = cur_xyz[:, 2]
+        # mni coordinates
+        cur_xyz_mni = contact_to_mni(fs_root, suj, cur_xyz)
+        df_coords['x_mni'] = cur_xyz_mni[:, 0]
+        df_coords['y_mni'] = cur_xyz_mni[:, 1]
+        df_coords['z_mni'] = cur_xyz_mni[:, 2]
+
+        # ---------------------------------------------------------------------
+        # VOLUMIQUE LABELLING
+        # ---------------------------------------------------------------------
+        # Freesurfer volumique labelling
+        fs_labels = labelling_contacts_vol_fs_mgz(fs_root, suj, cur_xyz,
+                                                  file=fs_vol_file, **kw)
+        df_fs_vol = pd.DataFrame(fs_labels.ravel(), columns=['Freesurfer_vol'])
+
+        # VEP volumique labelling
+        vep_labels = labelling_contacts_vol_fs_mgz(fs_root, suj, cur_xyz,
+                                                   file=vep_vol_file, **kw)
+        df_vep_vol = pd.DataFrame(vep_labels.ravel(), columns=['VEP_vol'])
+
+        # build hemisphere
+        hemi = np.array(['Right'] * cur_xyz.shape[0])
+        hemi[cur_xyz[:, 0] < 0] = 'Left'
+        df_hemi = pd.DataFrame(hemi, columns=['Hemisphere'])
+
+        # build the white / grey matter and subcortical in aseg
+        matter = df_fs_vol["Freesurfer_vol"].copy()
+        matter.replace(CONFIG['FS_CLEANUP'], inplace=True, regex=True)
+        matter_arr = np.array(matter)
+        m_is_none = matter_arr == bad_label
+        m_is_sub = matter_arr == 'Subcortical'
+        m_is_white = matter_arr == 'White'
+        nn_grey_matter = np.c_[m_is_none, m_is_sub, m_is_white].any(axis=1)
+        matter_arr[~nn_grey_matter] = 'Grey'
+        df_matter = pd.DataFrame(matter_arr, columns=['Matter'])
+
+        # ---------------------------------------------------------------------
+        # SURFACE LABELLING
+        # ---------------------------------------------------------------------
+        # Freesurfer surface labelling
+        fs_surf = labelling_contacts_surf_fs(fs_root, suj, cur_xyz, **kw)
+        df_fs_surf = pd.DataFrame(fs_surf, columns=['Freesurfer_surf'])
+
+        # VEP surface labelling
+        vep_surf = labelling_contacts_surf_fs(
+            fs_root, suj, cur_xyz, annot='aparc.vep', **kw)
+        df_vep_surf = pd.DataFrame(vep_surf, columns=['VEP_surf'])
+
+        # ---------------------------------------------------------------------
+        # FINALIZE DATAFRAME
+        # ---------------------------------------------------------------------
+        # drop aseg labels (because redundant)
+        # df_fs_vol.drop(columns="aseg.vol", inplace=True)
+        # merge everything
+        _df = pd.concat((df_name, df_matter, df_hemi, df_fs_vol, df_vep_vol,
+                         df_fs_surf, df_vep_surf, df_coords), axis=1)
+        df[derivation] = _df
+
+    # -------------------------------------------------------------------------
+    # Excel writting
+    with pd.ExcelWriter(save_as) as writer:
+        for sheet, wdf in df.items():
+            wdf.to_excel(writer, sheet_name=sheet)
+
+
 if __name__ == '__main__':
     from seegpy.io import read_3dslicer_fiducial
 
