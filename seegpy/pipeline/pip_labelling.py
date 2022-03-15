@@ -184,8 +184,6 @@ def pipeline_labelling_vep(save_path, fs_root, suj, c_xyz, c_names,
         Path to the folder where the labelling file have to be saved
     fs_root : string
         Path to the Brainvisa folder where subject are stored
-    bv_root : string
-        Path to the Brainvisa folder where subject are stored
     suj : string
         Subject name (e.g 'subject_01')
     c_xyz : array_like
