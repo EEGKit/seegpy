@@ -285,14 +285,14 @@ def pipeline_labelling_vep(save_path, fs_root, suj, c_xyz, c_names,
         # ---------------------------------------------------------------------
         # SURFACE LABELLING
         # ---------------------------------------------------------------------
-        # Freesurfer surface labelling
-        fs_surf = labelling_contacts_surf_fs(fs_root, suj, cur_xyz, **kw)
-        df_fs_surf = pd.DataFrame(fs_surf, columns=['Freesurfer_surf'])
+        # # Freesurfer surface labelling
+        # fs_surf = labelling_contacts_surf_fs(fs_root, suj, cur_xyz, **kw)
+        # df_fs_surf = pd.DataFrame(fs_surf, columns=['Freesurfer_surf'])
 
-        # VEP surface labelling
-        vep_surf = labelling_contacts_surf_fs(
-            fs_root, suj, cur_xyz, annot='aparc.vep', **kw)
-        df_vep_surf = pd.DataFrame(vep_surf, columns=['VEP_surf'])
+        # # VEP surface labelling
+        # vep_surf = labelling_contacts_surf_fs(
+        #     fs_root, suj, cur_xyz, annot='aparc.vep', **kw)
+        # df_vep_surf = pd.DataFrame(vep_surf, columns=['VEP_surf'])
 
         # ---------------------------------------------------------------------
         # FINALIZE DATAFRAME
@@ -301,7 +301,7 @@ def pipeline_labelling_vep(save_path, fs_root, suj, c_xyz, c_names,
         # df_fs_vol.drop(columns="aseg.vol", inplace=True)
         # merge everything
         _df = pd.concat((df_name, df_matter, df_hemi, df_fs_vol, df_vep_vol,
-                         df_fs_surf, df_vep_surf, df_coords), axis=1)
+                         df_coords), axis=1)
         df[derivation] = _df
 
     # -------------------------------------------------------------------------
@@ -314,17 +314,18 @@ def pipeline_labelling_vep(save_path, fs_root, suj, c_xyz, c_names,
 if __name__ == '__main__':
     from seegpy.io import read_3dslicer_fiducial
 
-    fs_root = '/home/etienne/Server/frioul/database/db_freesurfer/seeg_causal'
-    bv_root = '/home/etienne/Server/frioul/database/db_brainvisa/seeg_causal'
-    suj = 'subject_01'
-    save_to = '/run/media/etienne/DATA/RAW/CausaL/LYONNEURO_2014_DESj/TEST_DATA'
+    fs_root = '/home/etienne/VEP/'
+    # bv_root = '/home/etienne/Server/frioul/database/db_brainvisa/seeg_causal'
+    suj = 'subject_22'
+    save_to = '/home/etienne/VEP/'
 
     # -------------------------------------------------------------------------
     # path = '/home/etienne/DATA/RAW/CausaL/LYONNEURO_2015_BARv/3dslicer/recon.fcsv'
-    path = '/run/media/etienne/DATA/RAW/CausaL/LYONNEURO_2014_DESj/TEST_DATA/recon.fcsv'
+    path = 'file:///home/etienne/VEP/recon.fcsv'
     df = read_3dslicer_fiducial(path)
     c_xyz = np.array(df[['x', 'y', 'z']])
     c_names = np.array(df['label'])
 
-    pipeline_labelling_ss(save_to, fs_root, bv_root, suj, c_xyz, c_names,
-                          bipolar=True, radius=5., bad_label='none', verbose=False)
+    pipeline_labelling_vep(save_to, fs_root, suj, c_xyz, c_names,
+                          bipolar=True, radius=5., bad_label='none',
+                          verbose=False, testing=False)
