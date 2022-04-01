@@ -1,4 +1,6 @@
 """Reading functinons."""
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -6,6 +8,8 @@ import os
 import os.path as op
 
 from seegpy.contacts.utils import detect_seeg_contacts
+
+logger = logging.getLogger('seegpy')
 
 
 def read_trm(path, as_transform=True, inverse=False):
@@ -175,17 +179,28 @@ def read_pramat(mat_root):
     # raw file
     path_raw = op.join(mat_root, 'rawData', 'amplifierData')
     files_raw = os.listdir(path_raw)
+    if len(files_raw) > 1:
+        files_raw = ['iEEG.mat']
+        logger.error("Multiple matlab files detected. Forcing iEEG.mat")
     assert len(files_raw) == 1
     path_raw = op.join(path_raw, files_raw[0])
 
     # -------------------------------------------------------------------------
     # CHANNELS
     # -------------------------------------------------------------------------
-    f = h5py.File(path_head, 'r')['H']
-    fc = f['channels']
-    # read channel names and types
-    cn = [''.join(chr(i) for i in f[k[0]][:]) for k in list(fc['name'])]
-    ct = [''.join(chr(i) for i in f[k[0]][:]) for k in list(fc['signalType'])]
+    try:
+        f = h5py.File(path_head, 'r')['H']
+        # read channel names and types
+        fc = f['channels']
+        cn = [''.join(chr(i) for i in f[k[0]][:]) for k in list(fc['name'])]
+        ct = [''.join(chr(i) for i in f[k[0]][:]) for k in list(fc['signalType'])]
+    except:
+        from scipy.io import loadmat
+        f = loadmat(path_head)['H']
+        # read channel names and types
+        fc = f['channels']
+        cn = [k[0][0] for k in fc[0, 0][0, :]]
+        ct = [k[2][0] for k in fc[0, 0][0, :]]
     ch_names = np.array([k.upper() for k in cn])
     # get only sEEG channels
     is_seeg = np.array(ct) == 'SEEG'
@@ -217,6 +232,11 @@ def read_pramat(mat_root):
 
 if __name__ == '__main__':
 
-    path_mat = '/run/media/etienne/Samsung_T5/BACKUPS/RAW/CausaL/PRAGUES_2019_PR7_day1/'
+    path_mat = '/home/etienne/DATA/RAW/CausaL/PRAGUES_TEST/'
 
-    read_pramat(path_mat)
+    sf, raw, chan, ev, time = read_pramat(path_mat)
+    print(sf)
+    print(raw.shape)
+    print(chan)
+    print(ev)
+    print(time)
