@@ -43,7 +43,7 @@ def clean_contact(c_names):
     return list(c_names)
 
 
-def contact_mono_to_bipo(c_names, sep='-', verbose=None):
+def contact_mono_to_bipo(c_names, sep='-', clean=True, verbose=None):
     """Convert a list of monopolar contacts into bipolar contacts.
 
     Parameters
@@ -61,7 +61,8 @@ def contact_mono_to_bipo(c_names, sep='-', verbose=None):
     set_log_level(verbose)
     assert isinstance(c_names, list)
     # start by cleaning up monopolar contacts
-    c_names = clean_contact(c_names)
+    if clean:
+        c_names = clean_contact(c_names)
     # loop over monopolar contacts
     c_names_bip = []
     for k in c_names:
