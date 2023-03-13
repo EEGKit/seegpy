@@ -188,6 +188,10 @@ def read_pramat(mat_root):
     # -------------------------------------------------------------------------
     # CHANNELS
     # -------------------------------------------------------------------------
+
+    cn, ct = [], []
+
+    # +++++++++++++++++++++++++++++++++ HDF5 ++++++++++++++++++++++++++++++++++
     try:
         f = h5py.File(path_head, 'r')['H']
         # read channel names and types
@@ -195,14 +199,35 @@ def read_pramat(mat_root):
         cn = [''.join(chr(i) for i in f[k[0]][:]) for k in list(fc['name'])]
         ct = [''.join(chr(i) for i in f[k[0]][:]) for k in list(fc['signalType'])]
     except:
-        from scipy.io import loadmat
-        f = loadmat(path_head)['H']
-        # read channel names and types
+        logger.error("Extraction failed with HDF5. Trying with scipy")
+
+    # +++++++++++++++++++++++++++++++++ SCIPY +++++++++++++++++++++++++++++++++
+
+    if (not len(cn)) and (not len(ct)):
+        try:
+            from scipy.io import loadmat
+            f = loadmat(path_head)['H']
+            # read channel names and types
+            fc = f['channels']
+            cn = [k[0][0] for k in fc[0, 0][0, :]]
+            ct = [k[2][0] for k in fc[0, 0][0, :]]
+        except:
+            logger.error("Extraction failed with scipy. Trying with mat73")
+
+    # +++++++++++++++++++++++++++++++++ MAT73 +++++++++++++++++++++++++++++++++
+
+    if (not len(cn)) and (not len(ct)):
+        import mat73
+        f = mat73.loadmat(path_head)['H']
         fc = f['channels']
-        cn = [k[0][0] for k in fc[0, 0][0, :]]
-        ct = [k[2][0] for k in fc[0, 0][0, :]]
-    ch_names = np.array([k.upper() for k in cn])
+        cn = [k['name'] for k in fc]
+        ct = [k['signalType'] for k in fc]
+
     # get only sEEG channels
+    assert len(cn)
+    assert len(ct)
+    assert len(cn) == len(ct)
+    ch_names = np.array([k.upper() for k in cn])
     is_seeg = np.array(ct) == 'SEEG'
     seeg_chan = np.array(ch_names)[is_seeg]
 
@@ -232,7 +257,7 @@ def read_pramat(mat_root):
 
 if __name__ == '__main__':
 
-    path_mat = '/home/etienne/DATA/RAW/CausaL/PRAGUES_TEST/'
+    path_mat = '/home/etienne/DEBUG/PRAGUES_2021_PR7_day1/'
 
     sf, raw, chan, ev, time = read_pramat(path_mat)
     print(sf)

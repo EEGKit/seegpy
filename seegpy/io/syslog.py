@@ -7,7 +7,7 @@ import logging
 import sys
 import re
 
-from mne.fixes import _get_args
+from inspect import signature
 from decorator import FunctionMaker
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -190,7 +190,7 @@ def verbose(function):
     dec : callable
         The decorated function.
     """
-    arg_names = _get_args(function)
+    arg_names = signature(function).parameters
 
     def wrapper(*args, **kwargs):
         default_level = verbose_level = None
